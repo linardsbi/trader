@@ -1,0 +1,5 @@
+__pycache__
+*.session
+config.ini
+example.py
+prices.p

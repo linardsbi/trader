@@ -1,0 +1,13 @@
+[Telegram]
+
+api_id = my_id
+api_hash = my_hash
+
+# use full phone number including + and country code
+phone = my_number
+username = my_username
+
+[Binance]
+
+api_key = my_key
+api_secret = my_secret
