@@ -2,9 +2,11 @@
 import re
 import asyncio
 import pytesseract
-
+import binance_util, util
+import time
 from io import BytesIO
 from PIL import Image
+from binance.client import Client
 from telethon.errors import SessionPasswordNeededError
 from telethon import TelegramClient, events, sync
 from telethon.tl.functions.messages import (GetHistoryRequest)
@@ -12,13 +14,47 @@ from telethon.tl.types import (
 PeerChannel
 )
 
+class Account:
+    def __init__(self):
+        self.input_channel = 'https://t.me/bigpumpsignal'
+        self.funds = 0.0
+        self.start_time = time.time() # this should be set as the time at which the trading starts
+        self.telegram_client, self.binance_client = create_client()
 
-def ocr_image(image):
-    print("- Doing OCR -")
-    return str(((pytesseract.image_to_string(image)))) 
+        self.telegram_client.run_until_disconnected()
+
+    async def get_remaining_amount(self, symbol):
+        if (bal := self.binance_client.get_asset_balance(asset=symbol)):
+            self.funds = float(bal["free"])
+
+    # plan is to buy available amount of BTC in {name}
+    # first got to get the available amount -> this must be done just before starting to watch for coin name
+    # then send a market quoteOrderQty of the amount into {name}
+    # set a sell limit at whatever multiplier for whatever amount
+    # open browser
+    # that's it!
+    # TODO: error handling
+    def on_recieve_coin_name(self, name):
+        import webbrowser
+        max_timelimit = 10000000000 # this should be set to a "safe" period for buying; for now no limits
+        if (time.time() - self.start_time < max_timelimit):
+            binance_util.make_market_buy(self.binance_client, self.funds, name)
+
+            #ideally "amount" should be set to a precentage of available funds
+            amount = 0.001 # somehow need to check if order went through.. probably with get_remaining_amount
+            binance_util.make_multiplier_sell(self.binance_client, name, amount, 10)
+
+        webbrowser.open_new_tab(f"https://www.binance.com/en/trade/{name}_BTC")
+
+
+async def handle_telegram_image(img, onImageHasCoinName = None, onImageEmpty = None):
+    text = util.ocr_image(Image.open(BytesIO(await img)))
+    if (name := util.get_coin_name(text)) is not None:
+        if callable(onImageHasCoinName): onImageHasCoinName(name)
+    else:
+        if callable(onImageEmpty): onImageEmpty()
 
 def create_client():
-    import util
     # Create the client and connect
     config = util.get_config()
     client = TelegramClient(config["Telegram"]["username"],
@@ -34,56 +70,21 @@ def create_client():
         except SessionPasswordNeededError:
             client.sign_in(password=input('Password: '))
 
-    return client
+    return client, Client(config["Binance"]["api_key"], config["Binance"]["api_secret"])
 
-input_channel = 'https://t.me/bigpumpsignal'
+if __name__ == "__main__":
+    account = Account()
 
-client = create_client()
-
-def get_coin_name(text):
-    if len(name := re.findall(r"[\$S]([A-Z]{3,4})", text)) > 0:
-        return name[0]
-    return None
-
-@client.on(events.NewMessage(chats=input_channel))
+@account.telegram_client.on(events.NewMessage(chats=account.input_channel))
 async def onNewMessage(event):
+    print("recieved message")
     message = event.message.message
+    
     if message.media is not None:
-            img =  await client.download_media(message=message, file=bytes)
-            text = ocr_image(Image.open(BytesIO(img)))
-            if (name := get_coin_name(text)) is not None:
-                print(name)
-
-async def get_messages():
-    channel = await client.get_entity(input_channel)
-
-    history = await client(GetHistoryRequest(
-        peer=channel,
-        offset_id=0,
-        offset_date=None,
-        add_offset=0,
-        limit=10,
-        max_id=0,
-        min_id=0,
-        hash=0
-    ))
-
-    if not history.messages:
-        print("no messages")
-        return None
-
-    import webbrowser
-    for message in history.messages:
-        if message.media is not None:
-            img = await client.download_media(message=message, file=bytes)
-            
-            text = ocr_image(Image.open(BytesIO(img)))
-            if (name := get_coin_name(text)) is not None:
-                webbrowser.open(f"https://www.binance.com/en/trade/{name}_BTC")
-
+        # refresh amount in parallel to checking the image
+        account.telegram_client.loop.run_until_complete(asyncio.gather(
+            handle_telegram_image(account.telegram_client.download_media(message=message, file=bytes), account.on_recieve_coin_name),
+            account.get_remaining_amount("BTC")
+        ))
         
-async def main():
-    await get_messages()
 
-with client:
-    client.loop.run_until_complete(main())

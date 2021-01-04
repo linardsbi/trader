@@ -1,5 +1,8 @@
 __pycache__
+.vscode
 *.session
+*.session-journal
 config.ini
 example.py
 prices.p
+extras
