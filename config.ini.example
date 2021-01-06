@@ -11,3 +11,7 @@ username = my_username
 
 api_key = my_key
 api_secret = my_secret
+
+[Discord]
+
+auth_token =

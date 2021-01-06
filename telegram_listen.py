@@ -82,6 +82,10 @@ async def onNewMessage(event):
     
     if message.media is not None:
         # refresh amount in parallel to checking the image
+        # TODO the order of execution matters, because the amount might not be refreshed and the program might try
+        # to make an order, which is going to fail
+        # refreshing must somehow be called prior the handle function calling it's success callback
+        # This parallel thing might actually slow things down!
         account.telegram_client.loop.run_until_complete(asyncio.gather(
             handle_telegram_image(account.telegram_client.download_media(message=message, file=bytes), account.on_recieve_coin_name),
             account.get_remaining_amount("BTC")

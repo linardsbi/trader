@@ -1,6 +1,8 @@
 import configparser
 import json
-import re, pytesseract
+import re, pytesseract, requests
+from io import BytesIO
+from PIL import Image
 
 def get_config():
     config = configparser.ConfigParser()
@@ -15,3 +17,10 @@ def get_coin_name(text):
 def ocr_image(image):
     print("- Doing OCR -")
     return str(((pytesseract.image_to_string(image)))) 
+
+def get_image(url):
+    print(f"Getting: {url}")
+    r = requests.get(url)
+
+    assert r.status_code == 200, "image not found"
+    return Image.open(BytesIO(r.content))
