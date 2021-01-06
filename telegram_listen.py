@@ -14,18 +14,32 @@ from telethon.tl.types import (
 PeerChannel
 )
 
+WEB_ONLY = True
+
 class Account:
     def __init__(self):
         self.input_channel = 'https://t.me/bigpumpsignal'
         self.funds = 0.0
         self.start_time = time.time() # this should be set as the time at which the trading starts
+        self.max_buy_timelimit = 60 # this should be set to a "safe" period for buying; for now 1 min
         self.telegram_client, self.binance_client = create_client()
 
         self.telegram_client.run_until_disconnected()
 
-    async def get_remaining_amount(self, symbol):
+    async def set_remaining_amount(self, symbol):
         if (bal := self.binance_client.get_asset_balance(asset=symbol)):
             self.funds = float(bal["free"])
+
+
+    def print_for_web_only(self, price):
+        import pyperclip
+        print("Make a limit sell at:")
+        print(f"for 10x: {price * 10}")
+        print(f"for  8x: {price * 8}")
+        print(f"for  4x: {price * 4}")
+        print(f"for  2x: {price * 2}")
+
+        pyperclip.copy(price * 4)
 
     # plan is to buy available amount of BTC in {name}
     # first got to get the available amount -> this must be done just before starting to watch for coin name
@@ -34,17 +48,35 @@ class Account:
     # open browser
     # that's it!
     # TODO: error handling
+    # TODO this should be abstracted out of this class so it could be called from discord_listen
     def on_recieve_coin_name(self, name):
         import webbrowser
-        max_timelimit = 10000000000 # this should be set to a "safe" period for buying; for now no limits
-        if (time.time() - self.start_time < max_timelimit):
-            binance_util.make_market_buy(self.binance_client, self.funds, name)
-
-            #ideally "amount" should be set to a precentage of available funds
-            amount = 0.001 # somehow need to check if order went through.. probably with get_remaining_amount
-            binance_util.make_multiplier_sell(self.binance_client, name, amount, 10)
-
+        
         webbrowser.open_new_tab(f"https://www.binance.com/en/trade/{name}_BTC")
+        symbol = f"{name}BTC"
+
+        if WEB_ONLY:
+            if (time.time() - self.start_time < self.max_buy_timelimit and self.funds != 0):
+                binance_util.make_market_buy(self.binance_client, self.funds, symbol)
+                buy = binance_util.get_most_recent_buy_for(self.binance_client, symbol)
+                self.print_for_web_only(float(buy["price"]))
+            else:
+                print(f"time passed: {time.time() - self.start_time}\ncurrent BTC: {self.funds}")
+        else:
+            # while loop in case the orders don't go through
+            # should add a delay though not to overwhelm the api
+            # TODO this still needs a lot of work because it does not work
+            while (time.time() - self.start_time < self.max_buy_timelimit and self.funds):
+                binance_util.make_market_buy(self.binance_client, self.funds, symbol)
+
+                #ideally "amount" should be set to a precentage of available funds
+                amount = float(binance_util.get_most_recent_buy_for(self.binance_client, symbol)["price"]) # somehow need to check if order went through..
+                
+                if not amount: 
+                    self.set_remaining_amount("BTC") # refresh the amount of BTC on the account
+                    continue # try again
+
+                binance_util.make_multiplier_sell(self.binance_client, name, amount, 10)
 
 
 async def handle_telegram_image(img, onImageHasCoinName = None, onImageEmpty = None):
@@ -70,10 +102,12 @@ def create_client():
         except SessionPasswordNeededError:
             client.sign_in(password=input('Password: '))
 
+    # TODO the telegram and binance clients should be created seperately
     return client, Client(config["Binance"]["api_key"], config["Binance"]["api_secret"])
 
 if __name__ == "__main__":
     account = Account()
+    print(binance_util.get_most_recent_buy_for(account.binance_client, "BTCEUR"))
 
 @account.telegram_client.on(events.NewMessage(chats=account.input_channel))
 async def onNewMessage(event):
@@ -88,7 +122,7 @@ async def onNewMessage(event):
         # This parallel thing might actually slow things down!
         account.telegram_client.loop.run_until_complete(asyncio.gather(
             handle_telegram_image(account.telegram_client.download_media(message=message, file=bytes), account.on_recieve_coin_name),
-            account.get_remaining_amount("BTC")
+            account.set_remaining_amount("BTC")
         ))
         
 
