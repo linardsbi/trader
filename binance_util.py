@@ -32,15 +32,15 @@ async def get_remaining_amount(client, symbol):
 
 def make_market_buy(client, qty, symbol):
     print(f"market trading {qty} of bitcoin for available {symbol}")
-    # order = client.order_market_buy(
-    #         symbol=symbol,
-    #         quoteOrderQty=qty)
+    order = client.order_market_buy(
+            symbol=symbol,
+            quoteOrderQty=qty)
 
-    order = client.create_test_order(
-        symbol=symbol,
-        side=SIDE_BUY,
-        type=ORDER_TYPE_MARKET,
-        quoteOrderQty=qty)
+    # order = client.create_test_order(
+    #     symbol=symbol,
+    #     side=SIDE_BUY,
+    #     type=ORDER_TYPE_MARKET,
+    #     quoteOrderQty=qty)
 
     return order
 

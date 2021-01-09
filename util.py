@@ -10,7 +10,7 @@ def get_config():
     return config
 
 def get_coin_name(text):
-    if len(name := re.findall(r"[\$S]([A-Z]{3,4})", text)) > 0:
+    if len(name := re.findall(r"[\$S]([A-Z]{3,5})", text)) > 0:
         return name[0]
     return None
 
