@@ -4,6 +4,11 @@ from binance.client import Client
 from binance.enums import *
 from time import time
 
+def make_client():
+    import util
+    config = util.get_config()
+    return Client(config["Binance"]["api_key"], config["Binance"]["api_secret"])
+
 def save_prices(client):
     import pickle
     try:
