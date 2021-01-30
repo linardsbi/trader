@@ -4,12 +4,14 @@ import util
 import binance_util
 from binance.client import Client
 
-config = util.get_config()
+def make_client():
+    config = util.get_config()
+    TOKEN_AUTH = config["Discord"]["auth_token"] # Retrieved from browser local storage
 
-TOKEN_AUTH = config["Discord"]["auth_token"] # Retrieved from browser local storage
+    return discord.Client(), TOKEN_AUTH
 
-client = discord.Client()
-binance_client = Client(config["Binance"]["api_key"], config["Binance"]["api_secret"])
+client, auth_token = make_client()
+binance_client = binance_util.make_client()
 
 @client.event
 async def on_ready():
@@ -42,4 +44,4 @@ async def on_message(message):
             import webbrowser
             webbrowser.open_new_tab(f"https://www.binance.com/en/trade/{name}_BTC")
 
-client.run(TOKEN_AUTH, bot=False)
+client.run(auth_token, bot=False)

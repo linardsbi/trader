@@ -10,12 +10,11 @@ def get_config():
     return config
 
 def get_coin_name(text):
-    if len(name := re.findall(r"[\$S]([A-z]{3,5})", text)) > 0:
+    if len(name := re.findall(r"\s[\$S]([A-z]{3,5})", text)) > 0:
         return name[0]
     return None
 
 def ocr_image(image):
-    print("- Doing OCR -")
     return str(((pytesseract.image_to_string(image)))) 
 
 def get_image(url):

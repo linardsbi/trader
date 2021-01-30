@@ -4,7 +4,7 @@ from telethon.tl.functions.messages import (GetHistoryRequest)
 from telethon.tl.types import (
 PeerChannel
 )
-import webbrowser
+import webbrowser, unittest
 
 async def get_messages(client, input_channel):
     channel = await client.get_entity(input_channel)
@@ -29,3 +29,5 @@ async def get_messages(client, input_channel):
         if message.media is not None:
             handle_telegram_image(await client.download_media(message=message, file=bytes), 
                               lambda name: webbrowser.open_new_tab(f"https://www.binance.com/en/trade/{name}_BTC"))
+if __name__ == '__main__':
+    unittest.main()
