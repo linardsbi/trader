@@ -1,32 +1,54 @@
 import binance_util, util
 from binance.client import Client
 import util, asyncio
+import time
 
-watch_interval = 3 # seconds
-threshold = 5 # percent
 
-def make_price_dict(client):
-    return {item["symbol"]:item["price"] for item in client.get_all_tickers() if "BTC" in item["symbol"]}
-
-loop = asyncio.get_event_loop()
-client = binance_util.make_client()
-prices = make_price_dict(client)
-
-async def get_changed_coins(current_prices):
-    percent_diff = lambda old_price, new_price: ((new_price - old_price) / old_price) * 100
-    changed = []
-
-    for item in current_prices:
-        if "BTC" in item["symbol"] and (diff := percent_diff(float(prices[item["symbol"]]), float(item["price"]))) >= threshold:
-            item["change"] = diff
-            changed.append(item)
-
-    return changed
-
-async def check_and_print_changes(prev_prices):
-    current_prices = client.get_all_tickers()
+class Watcher:
+    is_allowed_symbol = lambda self, symbol: any([x in symbol for x in self.symbols]) and not any([x in symbol for x in self.not_symbols])
     
-    pumping = await get_changed_coins(current_prices)
+    def __init__(self, symbols=("BTC"), not_symbols=()) -> None:
+        """
+        param tuple symbols: Symbols to watch
+        param tuple not_symbols: Symbols to exclude
+        """
+        self.reset_prices(symbols, not_symbols)
+
+    def reset_prices(self, symbols=("BTC"), not_symbols=()):
+        """
+        param tuple symbols: Symbols to watch
+        param tuple not_symbols: Symbols to exclude
+        """
+        self.symbols = symbols
+        self.not_symbols = not_symbols
+        self.client = binance_util.make_client()
+        self.prices = self.make_price_dict()
+        self.last_price_time = time.time()
+        
+
+    def make_price_dict(self):
+        return {item["symbol"]:item["price"] 
+                for item in self.client.get_all_tickers() 
+                if self.is_allowed_symbol(item["symbol"])}
+
+    async def get_changed_coins(self, change_threshold=5.0):
+        """
+        :returns list: List of Coin dicts {"symbol": str, "price": float}
+        """
+        current_prices = self.client.get_all_tickers()
+        percent_diff = lambda old_price, new_price: ((new_price - old_price) / old_price) * 100
+        changed = []
+
+        for item in current_prices:
+            if self.is_allowed_symbol(item["symbol"]) and (diff := percent_diff(float(self.prices[item["symbol"]]), float(item["price"]))) >= change_threshold:
+                item["change"] = diff
+                item["changed_at"] = time.time()
+                changed.append(item)
+
+        return changed
+
+async def check_and_print_changes(prev_prices, w, change_threshold):
+    pumping = await w.get_changed_coins(change_threshold)
 
     for item in pumping:
         if not (item in prev_prices):
@@ -35,9 +57,16 @@ async def check_and_print_changes(prev_prices):
     return pumping
 
 async def main():
+    watch_interval = 3 # seconds
+    threshold = 5 # percent
+    w = Watcher()
     prev_changes = []
+    print(f"Watching for changes greater than or equal to {threshold}%")
+    print(w.prices)
     while True:
-        prev_changes = await check_and_print_changes(prev_changes)
+        prev_changes = await check_and_print_changes(prev_changes, w, threshold)
         await asyncio.sleep(watch_interval)
 
-loop.run_until_complete(main())
+if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
