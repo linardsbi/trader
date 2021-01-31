@@ -22,24 +22,14 @@ class Account:
         self.funds = 0.0
         self.start_time = time.time() # this should be set as the time at which the trading starts
         self.max_buy_timelimit = 60 # this should be set to a "safe" period for buying; for now 1 min
-        self.telegram_client, self.binance_client = create_client()
+        self.telegram_client = create_client()
+        self.binance_client = binance_util.make_client()
 
         self.telegram_client.run_until_disconnected()
 
     async def set_remaining_amount(self, symbol):
         if (bal := self.binance_client.get_asset_balance(asset=symbol)):
             self.funds = float(bal["free"])
-
-
-    def print_for_web_only(self, price):
-        import pyperclip
-        print("Make a limit sell at:")
-        print(f"for 10x: {price * 10}")
-        print(f"for  8x: {price * 8}")
-        print(f"for  4x: {price * 4}")
-        print(f"for  2x: {price * 2}")
-
-        pyperclip.copy(price * 4)
 
     # plan is to buy available amount of BTC in {name}
     # first got to get the available amount -> this must be done just before starting to watch for coin name
@@ -59,7 +49,7 @@ class Account:
             if (time.time() - self.start_time < self.max_buy_timelimit and self.funds != 0):
                 binance_util.make_market_buy(self.binance_client, self.funds, symbol)
                 buy = binance_util.get_most_recent_buy_for(self.binance_client, symbol)
-                self.print_for_web_only(float(buy["price"]))
+                util.print_for_web_only(float(buy["price"]))
             else:
                 print(f"time passed: {time.time() - self.start_time}\ncurrent BTC: {self.funds}")
         else:
@@ -69,14 +59,14 @@ class Account:
             while (time.time() - self.start_time < self.max_buy_timelimit and self.funds):
                 binance_util.make_market_buy(self.binance_client, self.funds, symbol)
 
-                #ideally "amount" should be set to a precentage of available funds
+                #ideally, "amount" should be set to a precentage of available funds
                 amount = float(binance_util.get_most_recent_buy_for(self.binance_client, symbol)["price"]) # somehow need to check if order went through..
                 
                 if not amount: 
                     self.set_remaining_amount("BTC") # refresh the amount of BTC on the account
                     continue # try again
 
-                binance_util.make_multiplier_sell(self.binance_client, name, amount, 10)
+                binance_util.make_multiplier_sell(self.binance_client, name, amount, 3)
 
 
 async def handle_telegram_image(img, onImageHasCoinName = None, onImageEmpty = None):
@@ -103,7 +93,7 @@ def create_client():
             client.sign_in(password=input('Password: '))
 
     # TODO the telegram and binance clients should be created seperately
-    return client, Client(config["Binance"]["api_key"], config["Binance"]["api_secret"])
+    return client
 
 if __name__ == "__main__":
     account = Account()

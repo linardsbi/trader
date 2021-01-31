@@ -1,6 +1,7 @@
-import binance_util, util
+import requests
+import binance_util
 from binance.client import Client
-import util, asyncio
+import asyncio
 import time
 
 
@@ -35,7 +36,13 @@ class Watcher:
         """
         :returns list: List of Coin dicts {"symbol": str, "price": float}
         """
-        current_prices = self.client.get_all_tickers()
+        try:
+            current_prices = self.client.get_all_tickers()
+        except requests.exceptions.ConnectionError:
+            print("Connection aborted, reconnecting")
+            self.client = binance_util.make_client()
+            return []
+
         percent_diff = lambda old_price, new_price: ((new_price - old_price) / old_price) * 100
         changed = []
 

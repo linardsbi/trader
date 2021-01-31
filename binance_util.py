@@ -50,16 +50,17 @@ def make_market_buy(client, qty, symbol):
     return order
 
 def make_multiplier_sell(client, symbol, amount, multiplier):
-    # order = client.create_order(
-    #     symbol=symbol,
-    #     side=SIDE_SELL,
-    #     type=ORDER_TYPE_TAKE_PROFIT,
-    #     stopPrice=amount * multiplier)
-    order = client.create_test_order(
+    print(f"selling {symbol} at {amount} * {multiplier}")
+    order = client.create_order(
         symbol=symbol,
         side=SIDE_SELL,
         type=ORDER_TYPE_TAKE_PROFIT,
         stopPrice=amount * multiplier)
+    # order = client.create_test_order(
+    #     symbol=symbol,
+    #     side=SIDE_SELL,
+    #     type=ORDER_TYPE_TAKE_PROFIT,
+    #     stopPrice=amount * multiplier)
 
     return order
 

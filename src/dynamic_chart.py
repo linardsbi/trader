@@ -14,7 +14,7 @@ class DynamicChart:
         self.prev_changes = []
         self.fig, self.ax = plt.subplots()
         self.win = self.fig.canvas.manager.window
-        self.watch = Watcher()
+        self.watch = Watcher(symbols=("BTC", "ETH"))
         self.initialized = False
 
         self.title = "Graph"
@@ -56,7 +56,7 @@ class DynamicChart:
         changes = await self.watch.get_changed_coins(change_threshold=5.0)
 
         if not changes and self.initialized: return
-        
+
         symbols = [price["symbol"] for price in changes]
         percent_changes = [price["change"] for price in changes]
 
@@ -74,9 +74,9 @@ class DynamicChart:
         self.prev_changes = changes
 
 # async def main():
-
+import datetime
 chart = DynamicChart()
-chart.set_options(title='Coin price changes in % \n', xlabel="Coins", ylabel=r"% change", annotated=True)
+chart.set_options(title=f"Coin price changes in % (since {datetime.datetime.now().ctime()})", xlabel="Coins", ylabel=r"% change", annotated=True)
 chart.show()
 
 

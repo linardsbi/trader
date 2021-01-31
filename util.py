@@ -4,6 +4,15 @@ import re, pytesseract, requests
 from io import BytesIO
 from PIL import Image
 
+def print_for_web_only(price):
+    import pyperclip
+    print("Make a limit sell at:")
+    print("for 10x: %f" % (price * 10))
+    print("for  8x: %f" % (price * 8))
+    print("for  4x: %f" % (price * 4))
+    print("for  2x: %f" % (price * 2))
+    pyperclip.copy(format(price * 4, "f"))
+
 def get_config():
     config = configparser.ConfigParser()
     config.read("config.ini")
