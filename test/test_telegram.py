@@ -4,30 +4,24 @@ from telethon.tl.functions.messages import (GetHistoryRequest)
 from telethon.tl.types import (
 PeerChannel
 )
-import webbrowser, unittest
+import sys, unittest
+from os import path
+sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
+import util, binance_util
 
-async def get_messages(client, input_channel):
-    channel = await client.get_entity(input_channel)
+from telegram_listen import Account, make_client
 
-    history = await client(GetHistoryRequest(
-        peer=channel,
-        offset_id=0,
-        offset_date=None,
-        add_offset=0,
-        limit=10,
-        max_id=0,
-        min_id=0,
-        hash=0
-    ))
+class TestTelegram(unittest.TestCase):
+    def __init__(self, methodName: str) -> None:
+        super().__init__(methodName=methodName)
+        #self.binance_client = binance_util.make_client()
 
-    if not history.messages:
-        print("no messages")
-        return None
+    def test_credentials(self):
+        client = make_client()
+        self.assertIsInstance(client, TelegramClient)
+        client.disconnect()
 
-    import webbrowser
-    for message in history.messages:
-        if message.media is not None:
-            handle_telegram_image(await client.download_media(message=message, file=bytes), 
-                              lambda name: webbrowser.open_new_tab(f"https://www.binance.com/en/trade/{name}_BTC"))
+        
+
 if __name__ == '__main__':
     unittest.main()

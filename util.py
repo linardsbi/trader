@@ -19,8 +19,8 @@ def get_config():
     return config
 
 def get_coin_name(text):
-    if len(name := re.findall(r"\s[\$S]([A-z]{3,5})", text)) > 0:
-        return name[0]
+    if len(name := re.findall(r":*\s*[\$S]([A-z]{3,5})", text)) > 0:
+        return str(name[0]).upper()
     return None
 
 def ocr_image(image):

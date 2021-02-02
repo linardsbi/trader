@@ -17,15 +17,29 @@ PeerChannel
 WEB_ONLY = True
 
 class Account:
-    def __init__(self):
-        self.input_channel = 'https://t.me/bigpumpsignal'
+    def __init__(self, input_channel: str, binance_client=None):
+        self.input_channel = input_channel
         self.funds = 0.0
         self.start_time = time.time() # this should be set as the time at which the trading starts
         self.max_buy_timelimit = 60 # this should be set to a "safe" period for buying; for now 1 min
-        self.telegram_client = create_client()
-        self.binance_client = binance_util.make_client()
+        self.telegram_client = make_client()
 
-        self.telegram_client.run_until_disconnected()
+        if not binance_client:
+            self.binance_client = binance_util.make_client()
+        else:
+            self.binance_client = binance_client
+
+        @self.telegram_client.on(events.NewMessage(chats=self.input_channel))
+        async def onNewMessage(event):
+            print("recieved message")
+            message = event.message.message
+            
+            if message.media is not None:
+                await account.set_remaining_amount("BTC")
+                await handle_telegram_image(self.telegram_client.download_media(message=message, file=bytes), self.on_recieve_coin_name),
+            elif (name := util.get_coin_name(event.stringify())):
+                self.on_recieve_coin_name(name)
+
 
     async def set_remaining_amount(self, symbol):
         if (bal := self.binance_client.get_asset_balance(asset=symbol)):
@@ -40,11 +54,13 @@ class Account:
     # TODO: error handling
     # TODO this should be abstracted out of this class so it could be called from discord_listen
     def on_recieve_coin_name(self, name):
+        import datetime
+        print(f"got {name} at {datetime.datetime.now()}")
         import webbrowser
         
         webbrowser.open_new_tab(f"https://www.binance.com/en/trade/{name}_BTC")
         symbol = f"{name}BTC"
-
+        
         if WEB_ONLY:
             if (time.time() - self.start_time < self.max_buy_timelimit and self.funds != 0):
                 binance_util.make_market_buy(self.binance_client, self.funds, symbol)
@@ -76,7 +92,7 @@ async def handle_telegram_image(img, onImageHasCoinName = None, onImageEmpty = N
     else:
         if callable(onImageEmpty): onImageEmpty()
 
-def create_client():
+def make_client():
     # Create the client and connect
     config = util.get_config()
     client = TelegramClient(config["Telegram"]["username"],
@@ -92,27 +108,13 @@ def create_client():
         except SessionPasswordNeededError:
             client.sign_in(password=input('Password: '))
 
-    # TODO the telegram and binance clients should be created seperately
     return client
 
 if __name__ == "__main__":
-    account = Account()
+    account = Account(input_channel='https://t.me/bigpumpsignal')
     print(binance_util.get_most_recent_buy_for(account.binance_client, "BTCEUR"))
+    account.telegram_client.run_until_disconnected()
 
-@account.telegram_client.on(events.NewMessage(chats=account.input_channel))
-async def onNewMessage(event):
-    print("recieved message")
-    message = event.message.message
     
-    if message.media is not None:
-        # refresh amount in parallel to checking the image
-        # TODO the order of execution matters, because the amount might not be refreshed and the program might try
-        # to make an order, which is going to fail
-        # refreshing must somehow be called prior the handle function calling it's success callback
-        # This parallel thing might actually slow things down!
-        account.telegram_client.loop.run_until_complete(asyncio.gather(
-            handle_telegram_image(account.telegram_client.download_media(message=message, file=bytes), account.on_recieve_coin_name),
-            account.set_remaining_amount("BTC")
-        ))
         
 

@@ -8,7 +8,7 @@ import time
 class Watcher:
     is_allowed_symbol = lambda self, symbol: any([x in symbol for x in self.symbols]) and not any([x in symbol for x in self.not_symbols])
     
-    def __init__(self, symbols=("BTC"), not_symbols=()) -> None:
+    def __init__(self, symbols=("BTC",), not_symbols=()) -> None:
         """
         param tuple symbols: Symbols to watch
         param tuple not_symbols: Symbols to exclude

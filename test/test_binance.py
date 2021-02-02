@@ -47,7 +47,7 @@ class TestBinanceAPI(unittest.TestCase):
             time.sleep(1)
         
         avg = sum(diffs) // max_iters
-        self.assertTrue(avg > 0 and avg <= 800, f"Either the system clock is out of sync or connecting to binance takes a long time, value: {avg}")
+        self.assertTrue(avg > -700 and avg <= 700, f"Either the system clock is out of sync or connecting to binance takes a long time, value: {avg}")
 
 if __name__ == '__main__':
     unittest.main()
