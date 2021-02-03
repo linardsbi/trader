@@ -5,9 +5,13 @@ import sys
 from os import path
 sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
 import util
- 
+
 def make_image(text, size=48):
-    fnt = ImageFont.truetype('arial.ttf', size)
+    try:
+        fnt = ImageFont.truetype('arial.ttf', size)
+    except Exception:
+        fnt = ImageFont.truetype('FreeSerif.otf', size)
+
     image = Image.new(mode = "RGB", size = (int(size)*len(text),size+250), color = "white")
 
     draw = ImageDraw.Draw(image)
@@ -21,7 +25,7 @@ class TestImageRecognition(unittest.TestCase):
             import random, string
             letters = string.ascii_lowercase + ' '
             return ''.join([random.choice(letters) for i in range(length)])
-        
+
         image = make_image(get_random_string(150))
         text = util.ocr_image(image)
         self.assertTrue(text, "No text recognized")
@@ -34,7 +38,7 @@ class TestImageRecognition(unittest.TestCase):
         text = util.ocr_image(image)
 
         self.assertTrue(text, "No text recognized")
-        
+
         name = util.get_coin_name(text)
 
         self.assertIsNotNone(name, "No coin name recognized")

@@ -30,29 +30,29 @@ def get_prices():
         print(f"failed. reason: {e}")
         return
 
-async def get_remaining_amount(client: Client, symbol: str) -> float:
+async def get_remaining_amount(client: Client, symbol: str):
     """
     :param Client client: Binance client
     :param str symbol: coin symbol e.g. "BTC" or "USDT"
     """
     if (bal := client.get_asset_balance(asset=symbol)):
-        return float(bal["free"])
-    return 0.0
-    
-def get_remaining_amount_sync(client: Client, symbol: str) -> float:
+        return bal["free"]
+    return "0.0"
+
+def get_remaining_amount_sync(client: Client, symbol: str):
     """
     :param Client client: Binance client
     :param str symbol: coin symbol e.g. "BTC" or "USDT"
     """
     if (bal := client.get_asset_balance(asset=symbol)):
-        return float(bal["free"])
-    return 0.0
+        return bal["free"]
+    return "0.0"
 
 def make_market_buy(client: Client, qty: float, symbol: str):
     print(f"market trading {qty} of {symbol[-3:]} for available {symbol}")
-    # order = client.order_market_buy(
-    #         symbol=symbol,
-    #         quoteOrderQty=qty)
+    order = client.order_market_buy(
+            symbol=symbol,
+            quoteOrderQty=qty)
 
     # order = client.create_test_order(
     #     symbol=symbol,

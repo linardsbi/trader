@@ -19,18 +19,19 @@ async def on_ready():
     # for channel in client.get_all_channels():
     #     print(channel)
 
+import datetime
 @client.event
 async def on_message(message):
     if "pump-signal" in str(message.channel) and len(message.attachments) > 0:
         text = util.ocr_image(util.get_image(message.attachments[0].url))
         if (name := util.get_coin_name(text)) is not None:
-            if name == "xxx" or name == "XXX": 
+            if name == "xxx" or name == "XXX":
                 print("test name")
                 return
-            print(f"got coin {name}")
+            print(f"got coin {name} at {datetime.datetime.now()}")
             symbol = f"{name}BTC"
             if funds := await binance_util.get_remaining_amount(binance_client, "BTC"):
-                pass
+
                 binance_util.make_market_buy(binance_client, funds, symbol)
             else:
                 print("No BTC in wallet")
