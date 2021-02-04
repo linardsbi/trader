@@ -3,6 +3,7 @@
 from binance.client import Client
 from binance.enums import *
 from time import time
+import binance
 
 def make_client() -> Client:
     import util
@@ -37,7 +38,7 @@ async def get_remaining_amount(client: Client, symbol: str):
     """
     if (bal := client.get_asset_balance(asset=symbol)):
         return bal["free"]
-    return "0.0"
+    return None
 
 def get_remaining_amount_sync(client: Client, symbol: str):
     """
@@ -46,7 +47,7 @@ def get_remaining_amount_sync(client: Client, symbol: str):
     """
     if (bal := client.get_asset_balance(asset=symbol)):
         return bal["free"]
-    return "0.0"
+    return None
 
 def make_market_buy(client: Client, qty: float, symbol: str):
     print(f"market trading {qty} of {symbol[-3:]} for available {symbol}")
@@ -60,7 +61,7 @@ def make_market_buy(client: Client, qty: float, symbol: str):
     #     type=ORDER_TYPE_MARKET,
     #     quoteOrderQty=qty)
 
-    #return order
+    return order
 
 def make_multiplier_sell(client: Client, symbol: str, amount: float, multiplier: float):
     print(f"selling {symbol} at {amount} * {multiplier}")
@@ -88,5 +89,34 @@ def get_most_recent_buy_for(client: Client, symbol: str):
         if trade["isBuyer"]: return trade
     return None
 
-def get_current_price_for(client: Client, symbol: str) -> float:
-    return float(client.get_symbol_ticker(symbol=symbol)["price"])
+def get_current_price_for(client: Client, symbol: str):
+    try:
+        return client.get_symbol_ticker(symbol=symbol)["price"]
+    except binance.exceptions.BinanceAPIException:
+        print(f"Invalid symbol: {symbol}")
+    return None
+
+def get_price_at_amount(client: Client, symbol: str, amount: float, type: str, largest: bool):
+    try:
+        orders = reversed(client.get_order_book(symbol=symbol)[type]) if largest else client.get_order_book(symbol=symbol)[type]
+        for item in orders:
+            if float(item[1]) > amount: # 'greater than' to be safe
+                return item[0]
+    except KeyError:
+        print(f"invalid order listing type: {type}")
+    except binance.exceptions.BinanceAPIException:
+        print(f"Invalid symbol: {symbol}")
+    
+    return None
+
+def get_smallest_ask_price_at_amount(client: Client, symbol: str, amount: float):
+    return get_price_at_amount(client, symbol, amount, "asks", largest=False)
+
+def get_smallest_bid_price_at_amount(client: Client, symbol: str, amount: float):
+    return get_price_at_amount(client, symbol, amount, "bids", largest=False)
+
+def get_largest_ask_price_at_amount(client: Client, symbol: str, amount: float):
+    return get_price_at_amount(client, symbol, amount, "asks", largest=True)
+
+def get_largest_ask_price_at_amount(client: Client, symbol: str, amount: float):
+    return get_price_at_amount(client, symbol, amount, "asks", largest=True)

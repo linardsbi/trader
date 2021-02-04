@@ -1,6 +1,6 @@
 import binance_util, threading, time
 
-funds = 0.0
+funds = None
 client = binance_util.make_client()
 
 def refresh_funds(name):
@@ -19,9 +19,19 @@ if __name__ == "__main__":
     if len(coin_name) >= 3:
         symbol = f"{coin_name}{to_coin}"
         try:
-            binance_util.make_market_buy(client, funds, symbol)
+            price = binance_util.get_current_price_for(client, symbol)
+            lowest_pr = binance_util.get_smallest_ask_price_at_amount(client, symbol, float(funds))
+            if lowest_pr:
+                qty = format(float(funds) / float(price), "f")
+
+                order = client.order_limit_buy(symbol=symbol, 
+                quantity=qty, 
+                price=lowest_pr)
+
+                print(f"limit buying {qty} of {coin_name} at {lowest_pr}")
+
         except Exception as e:
-            print(f"{e} Invalid coin name {coin_name}")
+            print(f"{e}\n with: {coin_name}")
             exit()
     else:
         print(f"Invalid coin name {coin_name}")
